@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INNACRI - Administración</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .login-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .login-header p {
+            opacity: 0.9;
+            font-size: 0.875rem;
+        }
+
+        .login-body {
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 1.25rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+        .remember-me label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            cursor: pointer;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            color: #9ca3af;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+        .demo-users {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .demo-users h3 {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+
+        .demo-user {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .demo-user:hover {
+            border-color: #dc2626;
+            transform: translateX(4px);
+        }
+
+        .demo-user .role {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .demo-user .credentials {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
+            display: block;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+            display: block;
+        }
+
+        .back-home {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .back-home a {
+            color: #dc2626;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .back-home a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>⚠️ INNACRI</h1>
+            <p>Panel de Administración</p>
+        </div>
+
+        <div class="login-body">
+            <div id="alert" class="alert"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Usuario</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input type="text" id="username" placeholder="Ingresa tu usuario" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="password" placeholder="Ingresa tu contraseña" required>
+                    </div>
+                </div>
+
+                <div class="remember-me">
+                    <input type="checkbox" id="remember">
+                    <label for="remember">Recordar sesión</label>
+                </div>
+
+                <button type="submit" class="login-btn">Iniciar Sesión</button>
+            </form>
+
+            <div class="divider">o</div>
+
+            <div class="demo-users">
+                <h3>🎯 Usuarios de prueba (click para autocompletar):</h3>
+                
+                <div class="demo-user" onclick="fillLogin('admin', 'admin123')">
+                    <div class="role">🔴 Super Administrador</div>
+                    <div class="credentials">Usuario: admin / Contraseña: admin123</div>
+                </div>
+
+                <div class="demo-user" onclick="fillLogin('moderador', 'mod123')">
+                    <div class="role">🟡 Moderador</div>
+                    <div class="credentials">Usuario: moderador / Contraseña: mod123</div>
+                </div>
+
+                <div class="demo-user" onclick="fillLogin('analista', 'analista123')">
+                    <div class="role">🟢 Analista</div>
+                    <div class="credentials">Usuario: analista / Contraseña: analista123</div>
+                </div>
+            </div>
+
+            <div class="back-home">
+                <a href="index.html">← Volver al sitio principal</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Base de datos simulada de usuarios
+        const USERS = {
+            'admin': {
+                password: 'admin123',
+                role: 'superadmin',
+                name: 'Administrador Principal',
+                permissions: ['all']
+            },
+            'moderador': {
+                password: 'mod123',
+                role: 'moderator',
+                name: 'Moderador de Contenido',
+                permissions: ['approve', 'reject', 'view']
+            },
+            'analista': {
+                password: 'analista123',
+                role: 'analyst',
+                name: 'Analista de Datos',
+                permissions: ['view', 'export']
+            }
+        };
+
+        function fillLogin(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = 'alert ' + type;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+
+            // Validar usuario
+            if (USERS[username] && USERS[username].password === password) {
+                const user = USERS[username];
+                
+                // Guardar sesión
+                const sessionData = {
+                    username: username,
+                    role: user.role,
+                    name: user.name,
+                    permissions: user.permissions,
+                    loginTime: new Date().toISOString()
+                };
+
+                if (remember) {
+                    localStorage.setItem('innacri_session', JSON.stringify(sessionData));
+                } else {
+                    sessionStorage.setItem('innacri_session', JSON.stringify(sessionData));
+                }
+
+                showAlert('✓ Inicio de sesión exitoso. Redirigiendo...', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'admin-dashboard.html';
+                }, 1500);
+            } else {
+                showAlert('✗ Usuario o contraseña incorrectos', 'error');
+            }
+        });
+
+        // Verificar si ya hay sesión activa
+        window.addEventListener('load', function() {
+            const session = localStorage.getItem('innacri_session') || sessionStorage.getItem('innacri_session');
+            if (session) {
+                const data = JSON.parse(session);
+                showAlert('Ya tienes una sesión activa. Redirigiendo...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'admin-dashboard.html';
+                }, 1500);
+            }
+        });
+    </script>
+</body>
+</html>

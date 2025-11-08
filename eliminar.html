@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INNACRI - Dashboard Administrativo con Estadísticas</title>
+    
+    <!-- Leaflet CSS para mapas -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet JS para mapas -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- jsPDF para exportar a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-item.active {
+            background: #dc2626;
+            font-weight: bold;
+        }
+
+        .sidebar-footer {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #991b1b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .view {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-box h3 {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-box .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .stat-box.pending {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .stat-box.approved {
+            border-left: 4px solid #10b981;
+        }
+
+        .stat-box.critical {
+            border-left: 4px solid #ef4444;
+        }
+
+        /* Estadísticas Específicas */
+        .stats-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-header h3 {
+            font-size: 1.25rem;
+            color: #1f2937;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .period-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .period-btn.active {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        #mapContainer, #heatMapContainer {
+            height: 400px;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 2px solid #e5e7eb;
+        }
+
+        .zone-list {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .zone-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #dc2626;
+        }
+
+        .zone-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .zone-count {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1.5rem;
+        }
+
+        .alert-banner {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            color: #92400e;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: #dc2626;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* Alert Items */
+        .alert-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s;
+        }
+
+        .alert-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .alert-info {
+            flex: 1;
+        }
+
+        .alert-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-approve {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-reject {
+            background: #ef4444;
+            color: white;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                ⚠️ INNACRI
+            </div>
+            <div class="sidebar-menu">
+                <div class="sidebar-item active" onclick="showView('dashboard')">📊 Dashboard</div>
+                <div class="sidebar-item" onclick="showView('estadisticas')">📈 Estadísticas</div>
+                <div class="sidebar-item" onclick="showView('alerts')">🚨 Alertas Pendientes</div>
+                <div class="sidebar-item" onclick="showView('approved')">✅ Aprobadas</div>
+                <div class="sidebar-item" onclick="showView('rejected')">❌ Rechazadas</div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1>🛡️ Panel de Administración INNACRI</h1>
+                <div class="user-info">
+                    <span id="userName" style="font-weight: 500;">Administrador</span>
+                    <div class="user-badge" id="userRole">Superadmin</div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Dashboard View -->
+                <div id="dashboard" class="view active">
+                    <h2 style="margin-bottom: 1.5rem;">📈 Resumen General</h2>
+                    <div class="stats-grid">
+                        <div class="stat-box pending">
+                            <h3>Alertas Pendientes</h3>
+                            <div class="number" id="statsPending">0</div>
+                        </div>
+                        <div class="stat-box approved">
+                            <h3>Alertas Aprobadas</h3>
+                            <div class="number" id="statsApproved">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <h3>Alertas Rechazadas</h3>
+                            <div class="number" id="statsRejected">0</div>
+                        </div>
+                        <div class="stat-box critical">
+                            <h3>Críticas Activas</h3>
+                            <div class="number" id="statsCritical">0</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; margin-top: 2rem;">Alertas Recientes Pendientes</h3>
+                    <div id="recentAlerts"></div>
+                </div>
+
+                <!-- NUEVA VISTA DE ESTADÍSTICAS -->
+                <div id="estadisticas" class="view">
+                    <h2 style="margin-bottom: 1.5rem;">📊 Estadísticas Avanzadas del Sistema</h2>
+                    
+                    <div class="alert-banner">
+                        ⚠️ DATOS SIMULADOS - Estas estadísticas son simulaciones para propósitos de demostración
+                    </div>
+
+                    <!-- Top 10 Zonas Peligrosas -->
+                    <div class="stats-container">
+                        <div class="stats-header">
+                            <h3>🚨 Top 10 Zonas Más Peligrosas de Guatemala</h3>
+                            <button class="export-btn" onclick="exportToPDF()">📄 Exportar PDF</button>
+                        </div>
+                        <div class="zone-list" id="topZonesContainer">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Mapa de Calor de Incidencias -->
+                    <div class="stats-container">
+                        <div class="stats-header">
+                            <h3>🗺️ Mapa de Calor - Incidencias por Zona</h3>
+                        </div>
+                        <div id="heatMapContainer"></div>
+                    </div>
+
+                    <!-- Análisis Temporal -->
+                    <div class="stats-container">
+                        <div class="stats-header">
+                            <h3>📅 Análisis Temporal de Incidencias</h3>
+                        </div>
+                        <div class="period-selector">
+                            <button class="period-btn active" onclick="changePeriod('daily')">Diario</button>
+                            <button class="period-btn" onclick="changePeriod('weekly')">Semanal</button>
+                            <button class="period-btn" onclick="changePeriod('monthly')">Mensual</button>
+                            <button class="period-btn" onclick="changePeriod('yearly')">Anual</button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="temporalChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Distribución por Tipo de Crimen -->
+                    <div class="stats-container">
+                        <div class="stats-header">
+                            <h3>🎯 Distribución por Tipo de Crimen</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="crimeTypeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Comparativa de Zonas -->
+                    <div class="stats-container">
+                        <div class="stats-header">
+                            <h3>📊 Comparativa de Incidencias por Zona</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="zoneComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts Pending View -->
+                <div id="alerts" class="view">
+                    <h2 style="margin-bottom: 1.5rem;">🚨 Alertas Pendientes de Revisión</h2>
+                    <div class="alerts-container">
+                        <div class="alerts-list" id="pendingAlertsList"></div>
+                    </div>
+                </div>
+
+                <!-- Approved View -->
+                <div id="approved" class="view">
+                    <h2 style="margin-bottom: 1.5rem;">✅ Alertas Aprobadas</h2>
+                    <div class="alerts-container">
+                        <div class="alerts-list" id="approvedAlertsList"></div>
+                    </div>
+                </div>
+
+                <!-- Rejected View -->
+                <div id="rejected" class="view">
+                    <h2 style="margin-bottom: 1.5rem;">❌ Alertas Rechazadas</h2>
+                    <div class="alerts-container">
+                        <div class="alerts-list" id="rejectedAlertsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+            <div>Generando PDF...</div>
+        </div>
+    </div>
+
+    <script>
+        // Zonas de Guatemala para simulación
+        const GUATEMALA_ZONES = [
+            { name: 'Zona 1 - Centro Histórico', lat: 14.6407, lng: -90.5133 },
+            { name: 'Zona 18', lat: 14.6564, lng: -90.4847 },
+            { name: 'Zona 12 - Villa Nueva', lat: 14.5253, lng: -90.5876 },
+            { name: 'Zona 21', lat: 14.5758, lng: -90.4411 },
+            { name: 'Zona 6 - Mixco', lat: 14.6333, lng: -90.6061 },
+            { name: 'Zona 7 - Tikal Futura', lat: 14.6211, lng: -90.5556 },
+            { name: 'Zona 3', lat: 14.6244, lng: -90.5289 },
+            { name: 'Zona 5', lat: 14.6189, lng: -90.5019 },
+            { name: 'Zona 11', lat: 14.6122, lng: -90.5594 },
+            { name: 'Zona 10 - Zona Viva', lat: 14.5975, lng: -90.5061 },
+            { name: 'Zona 13 - Aurora', lat: 14.5833, lng: -90.5306 },
+            { name: 'Zona 15 - Vista Hermosa', lat: 14.6022, lng: -90.4911 },
+            { name: 'Zona 16', lat: 14.5889, lng: -90.4892 },
+            { name: 'Zona 9', lat: 14.6089, lng: -90.5244 },
+            { name: 'Villa Canales', lat: 14.4817, lng: -90.5319 },
+            { name: 'San José Pinula', lat: 14.5461, lng: -90.4111 },
+            { name: 'Santa Catarina Pinula', lat: 14.5689, lng: -90.4956 },
+            { name: 'Amatitlán', lat: 14.4872, lng: -90.6350 },
+            { name: 'Chinautla', lat: 14.7083, lng: -90.5000 },
+            { name: 'San Miguel Petapa', lat: 14.5089, lng: -90.5619 }
+        ];
+
+        // Tipos de crímenes
+        const CRIME_TYPES = [
+            { id: 'robo', name: 'Robo', icon: '💰', color: '#f59e0b' },
+            { id: 'asalto', name: 'Asalto', icon: '🔪', color: '#ef4444' },
+            { id: 'estafa', name: 'Estafa', icon: '📱', color: '#8b5cf6' },
+            { id: 'vandalismo', name: 'Vandalismo', icon: '🔨', color: '#6b7280' },
+            { id: 'secuestro', name: 'Secuestro', icon: '🚨', color: '#dc2626' },
+            { id: 'extorsion', name: 'Extorsión', icon: '📞', color: '#ea580c' }
+        ];
+
+        let map = null;
+        let charts = {};
+        let currentPeriod = 'daily';
+        let simulatedData = null;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSession();
+            loadSimulatedData();
+            updateDashboard();
+        });
+
+        // Verificar sesión
+        function checkSession() {
+            const session = localStorage.getItem('innacri_session') || sessionStorage.getItem('innacri_session');
+            if (!session) {
+                window.location.href = 'admin-login.html';
+                return;
+            }
+            const data = JSON.parse(session);
+            document.getElementById('userName').textContent = data.name || 'Usuario';
+            document.getElementById('userRole').textContent = data.role === 'superadmin' ? '🔴 Superadmin' : '🟡 ' + data.role;
+        }
+
+        // Generar datos simulados
+        function generateSimulatedData() {
+            const data = {
+                zones: {},
+                daily: [],
+                weekly: [],
+                monthly: [],
+                yearly: [],
+                crimeTypes: {}
+            };
+
+            // Generar datos por zona con ponderación para crear "zonas peligrosas"
+            GUATEMALA_ZONES.forEach((zone, index) => {
+                // Las primeras zonas tendrán más incidencias (simulación)
+                const dangerWeight = index < 10 ? Math.random() * 100 + 50 : Math.random() * 50;
+                data.zones[zone.name] = {
+                    total: Math.floor(dangerWeight + Math.random() * 100),
+                    lat: zone.lat,
+                    lng: zone.lng,
+                    crimes: {}
+                };
+
+                // Distribuir crímenes por tipo
+                CRIME_TYPES.forEach(crime => {
+                    data.zones[zone.name].crimes[crime.id] = Math.floor(Math.random() * 30);
+                });
+            });
+
+            // Generar datos temporales - Últimos 30 días
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                data.daily.push({
+                    date: date.toISOString().split('T')[0],
+                    incidents: Math.floor(Math.random() * 50 + 20)
+                });
+            }
+
+            // Datos semanales - Últimas 12 semanas
+            for (let i = 11; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - (i * 7));
+                data.weekly.push({
+                    week: `Semana ${12 - i}`,
+                    incidents: Math.floor(Math.random() * 300 + 100)
+                });
+            }
+
+            // Datos mensuales - Últimos 12 meses
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            for (let i = 0; i < 12; i++) {
+                data.monthly.push({
+                    month: months[i],
+                    incidents: Math.floor(Math.random() * 1000 + 500)
+                });
+            }
+
+            // Datos anuales - Últimos 5 años
+            for (let i = 4; i >= 0; i--) {
+                const year = new Date().getFullYear() - i;
+                data.yearly.push({
+                    year: year,
+                    incidents: Math.floor(Math.random() * 10000 + 5000)
+                });
+            }
+
+            // Distribución total por tipo de crimen
+            CRIME_TYPES.forEach(crime => {
+                data.crimeTypes[crime.id] = {
+                    name: crime.name,
+                    total: Math.floor(Math.random() * 2000 + 500),
+                    color: crime.color
+                };
+            });
+
+            return data;
+        }
+
+        // Cargar o generar datos simulados
+        function loadSimulatedData() {
+            let stored = localStorage.getItem('innacri_statistics');
+            if (!stored) {
+                simulatedData = generateSimulatedData();
+                localStorage.setItem('innacri_statistics', JSON.stringify(simulatedData));
+            } else {
+                simulatedData = JSON.parse(stored);
+            }
+        }
+
+        // Actualizar dashboard general
+        function updateDashboard() {
+            // Simular contadores
+            document.getElementById('statsPending').textContent = Math.floor(Math.random() * 50 + 10);
+            document.getElementById('statsApproved').textContent = Math.floor(Math.random() * 200 + 100);
+            document.getElementById('statsRejected').textContent = Math.floor(Math.random() * 30 + 5);
+            document.getElementById('statsCritical').textContent = Math.floor(Math.random() * 10 + 2);
+        }
+
+        // Cambiar vista
+        function showView(viewId) {
+            // Actualizar sidebar
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Actualizar vistas
+            document.querySelectorAll('.view').forEach(view => {
+                view.classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+
+            // Si es la vista de estadísticas, inicializar
+            if (viewId === 'estadisticas') {
+                setTimeout(() => initializeStatistics(), 100);
+            }
+        }
+
+        // Inicializar estadísticas
+        function initializeStatistics() {
+            renderTopZones();
+            initializeHeatMap();
+            initializeTemporalChart();
+            initializeCrimeTypeChart();
+            initializeZoneComparisonChart();
+        }
+
+        // Renderizar top 10 zonas peligrosas
+        function renderTopZones() {
+            const sortedZones = Object.entries(simulatedData.zones)
+                .sort((a, b) => b[1].total - a[1].total)
+                .slice(0, 10);
+
+            const container = document.getElementById('topZonesContainer');
+            container.innerHTML = sortedZones.map((zone, index) => `
+                <div class="zone-item">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 1.5rem; font-weight: bold; color: ${index < 3 ? '#dc2626' : '#6b7280'};">
+                            ${index + 1}°
+                        </span>
+                        <div>
+                            <div class="zone-name">${zone[0]}</div>
+                            <div style="font-size: 0.75rem; color: #9ca3af;">
+                                Mayor incidencia: ${Object.entries(zone[1].crimes).sort((a,b) => b[1] - a[1])[0][0]}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="zone-count">${zone[1].total} incidencias</div>
+                </div>
+            `).join('');
+        }
+
+        // Inicializar mapa de calor
+        function initializeHeatMap() {
+            // Si el mapa ya existe, lo destruimos
+            if (map) {
+                map.remove();
+            }
+
+            // Crear nuevo mapa centrado en Guatemala
+            map = L.map('heatMapContainer').setView([14.6349, -90.5069], 11);
+            
+            // Agregar capa de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Agregar marcadores para cada zona
+            Object.entries(simulatedData.zones).forEach(([zoneName, zoneData]) => {
+                const intensity = zoneData.total;
+                const color = intensity > 100 ? 'red' : intensity > 50 ? 'orange' : 'yellow';
+                
+                // Crear círculo con tamaño proporcional a las incidencias
+                L.circle([zoneData.lat, zoneData.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.5,
+                    radius: Math.sqrt(intensity) * 50
+                }).addTo(map).bindPopup(`
+                    <strong>${zoneName}</strong><br>
+                    Total incidencias: ${intensity}<br>
+                    <small>Click para más detalles</small>
+                `);
+            });
+        }
+
+        // Inicializar gráfico temporal
+        function initializeTemporalChart() {
+            const ctx = document.getElementById('temporalChart').getContext('2d');
+            
+            if (charts.temporal) {
+                charts.temporal.destroy();
+            }
+
+            const data = simulatedData[currentPeriod];
+            
+            charts.temporal = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date || d.week || d.month || d.year),
+                    datasets: [{
+                        label: 'Incidencias',
+                        data: data.map(d => d.incidents),
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Tendencia ${currentPeriod === 'daily' ? 'Diaria' : 
+                                          currentPeriod === 'weekly' ? 'Semanal' : 
+                                          currentPeriod === 'monthly' ? 'Mensual' : 'Anual'}`
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Número de Incidencias'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Cambiar período temporal
+        function changePeriod(period) {
+            currentPeriod = period;
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            initializeTemporalChart();
+        }
+
+        // Inicializar gráfico de tipos de crimen
+        function initializeCrimeTypeChart() {
+            const ctx = document.getElementById('crimeTypeChart').getContext('2d');
+            
+            if (charts.crimeType) {
+                charts.crimeType.destroy();
+            }
+
+            const data = Object.values(simulatedData.crimeTypes);
+            
+            charts.crimeType = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [{
+                        data: data.map(d => d.total),
+                        backgroundColor: data.map(d => d.color),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Inicializar gráfico de comparación de zonas
+        function initializeZoneComparisonChart() {
+            const ctx = document.getElementById('zoneComparisonChart').getContext('2d');
+            
+            if (charts.zoneComparison) {
+                charts.zoneComparison.destroy();
+            }
+
+            const topZones = Object.entries(simulatedData.zones)
+                .sort((a, b) => b[1].total - a[1].total)
+                .slice(0, 10);
+
+            charts.zoneComparison = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: topZones.map(z => z[0].replace('Zona ', 'Z.')),
+                    datasets: [{
+                        label: 'Total Incidencias',
+                        data: topZones.map(z => z[1].total),
+                        backgroundColor: topZones.map((_, i) => 
+                            i < 3 ? '#dc2626' : i < 6 ? '#f59e0b' : '#6b7280'
+                        )
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Número de Incidencias'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Zonas'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Exportar a PDF
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Mostrar loading
+            document.getElementById('loadingOverlay').classList.add('active');
+            
+            try {
+                // Título principal
+                doc.setFontSize(20);
+                doc.setTextColor(220, 38, 38);
+                doc.text('INNACRI - Reporte de Estadísticas', 105, 20, { align: 'center' });
+                
+                // Subtítulo
+                doc.setFontSize(12);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Sistema de Alertas de Seguridad Ciudadana', 105, 30, { align: 'center' });
+                doc.text('DATOS SIMULADOS - Propósitos de Demostración', 105, 37, { align: 'center' });
+                
+                // Fecha del reporte
+                doc.setFontSize(10);
+                const fecha = new Date().toLocaleDateString('es-GT', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                doc.text(`Fecha del reporte: ${fecha}`, 105, 45, { align: 'center' });
+                
+                // Línea divisoria
+                doc.setDrawColor(220, 38, 38);
+                doc.line(20, 50, 190, 50);
+                
+                // Top 10 Zonas Peligrosas
+                doc.setFontSize(14);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Top 10 Zonas Más Peligrosas', 20, 60);
+                
+                const sortedZones = Object.entries(simulatedData.zones)
+                    .sort((a, b) => b[1].total - a[1].total)
+                    .slice(0, 10);
+                
+                let yPos = 70;
+                doc.setFontSize(10);
+                sortedZones.forEach((zone, index) => {
+                    const color = index < 3 ? [220, 38, 38] : [107, 114, 128];
+                    doc.setTextColor(...color);
+                    doc.text(`${index + 1}. ${zone[0]}`, 25, yPos);
+                    doc.text(`${zone[1].total} incidencias`, 160, yPos, { align: 'right' });
+                    yPos += 7;
+                });
+                
+                // Estadísticas Generales
+                yPos += 10;
+                doc.setFontSize(14);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Resumen Estadístico', 20, yPos);
+                
+                yPos += 10;
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                
+                // Calcular totales
+                const totalIncidents = Object.values(simulatedData.zones).reduce((sum, zone) => sum + zone.total, 0);
+                const avgIncidents = Math.round(totalIncidents / Object.keys(simulatedData.zones).length);
+                const maxZone = sortedZones[0];
+                
+                doc.text(`• Total de incidencias registradas: ${totalIncidents}`, 25, yPos);
+                yPos += 7;
+                doc.text(`• Promedio de incidencias por zona: ${avgIncidents}`, 25, yPos);
+                yPos += 7;
+                doc.text(`• Zona con mayor incidencia: ${maxZone[0]} (${maxZone[1].total} casos)`, 25, yPos);
+                yPos += 7;
+                doc.text(`• Período analizado: ${currentPeriod === 'daily' ? 'Últimos 30 días' : 
+                                             currentPeriod === 'weekly' ? 'Últimas 12 semanas' :
+                                             currentPeriod === 'monthly' ? 'Últimos 12 meses' : 
+                                             'Últimos 5 años'}`, 25, yPos);
+                
+                // Distribución por tipo de crimen
+                yPos += 15;
+                doc.setFontSize(14);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Distribución por Tipo de Crimen', 20, yPos);
+                
+                yPos += 10;
+                doc.setFontSize(10);
+                Object.values(simulatedData.crimeTypes).forEach(crime => {
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(`• ${crime.name}:`, 25, yPos);
+                    doc.text(`${crime.total} casos`, 70, yPos);
+                    const percentage = ((crime.total / totalIncidents) * 100).toFixed(1);
+                    doc.text(`(${percentage}%)`, 100, yPos);
+                    yPos += 7;
+                });
+                
+                // Nota al pie
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text('Este reporte fue generado automáticamente por el sistema INNACRI', 105, 280, { align: 'center' });
+                doc.text('© 2024 INNACRI - Sistema de Seguridad Ciudadana para Guatemala', 105, 285, { align: 'center' });
+                
+                // Guardar el PDF
+                doc.save(`INNACRI_Reporte_Estadisticas_${fecha.replace(/\s/g, '_')}.pdf`);
+                
+            } catch (error) {
+                console.error('Error al generar PDF:', error);
+                alert('Error al generar el PDF. Por favor, intente nuevamente.');
+            } finally {
+                // Ocultar loading
+                document.getElementById('loadingOverlay').classList.remove('active');
+            }
+        }
+
+        // Cerrar sesión
+        function logout() {
+            localStorage.removeItem('innacri_session');
+            sessionStorage.removeItem('innacri_session');
+            window.location.href = 'admin-login.html';
+        }
+
+        // Regenerar datos (para testing)
+        function regenerateData() {
+            if (confirm('¿Desea regenerar todos los datos simulados? Esto sobrescribirá los datos actuales.')) {
+                simulatedData = generateSimulatedData();
+                localStorage.setItem('innacri_statistics', JSON.stringify(simulatedData));
+                initializeStatistics();
+                alert('Datos regenerados exitosamente');
+            }
+        }
+    </script>
+</body>
+</html>
